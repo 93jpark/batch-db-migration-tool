@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-aipub-batch-database
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "0"
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: db-init
+          image: postgres:15
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-envs
+                  key: POSTGRES_PASSWORD
+          command:
+            - sh
+            - -c
+            - |
+              echo "⏳ Waiting for PostgreSQL to be ready..."
+              for i in {1..60}; do
+              if pg_isready -h postgresql.{{ .Release.Namespace }} -U {{ .Values.postgresql.username }}; then
+              echo "✅ PostgreSQL is ready!"
+              break
+              fi
+              echo "Still waiting for PostgreSQL... ($i)"
+              sleep 2
+              done
+
+              echo "✅ PostgreSQL is ready. Checking if DB '{{ .Values.postgresql.database }}' exists..."
+              psql -h postgresql.{{ .Release.Namespace }} -U {{ .Values.postgresql.username }} -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '{{ .Values.postgresql.database }}'" | grep -q 1 || \
+              psql -h postgresql.{{ .Release.Namespace }} -U {{ .Values.postgresql.username }} -d postgres -c "CREATE DATABASE {{ .Values.postgresql.database }}"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: aipub-batch-db-migration-job
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "1"
+spec:
+  backoffLimit: 100
+  completions: 1
+  parallelism: 1
+  template:
+    spec:
+      containers:
+      - name: aipub-batch-db-migration
+        envFrom:
+        - configMapRef:
+           name: aipub-batch-db-migration-envs
+        - secretRef:
+           name: aipub-batch-db-migration-envs
+        image: {{ .Values.db_migration.image }}
+        #imagePullPolicy: Never
+        volumeMounts:
+          - name: aipub-batch-db-migration-data-postgresql
+            readOnly: true
+            mountPath: /etc/db-migration-data/postgresql
+      restartPolicy: Never
+      volumes:
+        - name: aipub-batch-db-migration-data-postgresql
+          configMap:
+            name: aipub-batch-db-migration-data-postgresql
+---

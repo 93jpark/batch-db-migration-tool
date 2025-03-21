@@ -1,0 +1,11 @@
+postgresql:
+  username: "root"
+  password: "Password1@"
+  database: "aipub-batch"
+  storageClassName: standard
+  pvcSize: 5Gi
+
+db_migration:
+  image: ten1010-io/aipub-db-migration-tool:1.0.0-SNAPSHOT
+  data:
+    - V1__Init.sql

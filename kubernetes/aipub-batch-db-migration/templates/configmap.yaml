@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-envs
+  namespace: {{ .Release.Namespace }}
+data:
+  TZ: "Asia/Seoul"
+  POSTGRESQL_USERNAME: "{{ .Values.postgresql.username }}"
+  POSTGRESQL_DATABASE: "{{ .Values.postgresql.database }}"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aipub-batch-db-migration-envs
+  namespace: {{ .Release.Namespace }}
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.{{ .Release.Namespace }}:5432/aipub-batch"
+  SPRING_DATASOURCE_USERNAME: "{{ .Values.postgresql.username }}"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aipub-batch-db-migration-data-postgresql
+  namespace: {{ .Release.Namespace }}
+data:
+{{- range $i, $filename := .Values.db_migration.data }}
+  {{ $filename }}: |-
+{{ $.Files.Get (printf "data/postgresql/%s" $filename) | indent 4 }}
+{{- end}}
+---

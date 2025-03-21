@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: aipub-notification-batch-db-migration-job
+spec:
+  backoffLimit: 100
+  completions: 1
+  parallelism: 1
+  template:
+    spec:
+      containers:
+        - name: aipub-notification-batch-db-migration
+          image: coaster-apiserver-boot/db-migration-tool:1.0.0-SNAPSHOT
+          envFrom:
+            - configMapRef:
+                name: aipub-notification-batch-db-migration-envs
+            - secretRef:
+                name: aipub-notification-batch-db-migration-envs
+          volumeMounts:
+            - name: aipub-notification-batch-db-migration-data-postgresql
+              readOnly: true
+              mountPath: /etc/db-migration-data/postgresql
+      restartPolicy: Never
+      volumes:
+        - name: aipub-notification-batch-db-migration-data-postgresql
+          configMap:
+            name: aipub-notification-batch-db-migration-data-postgresql
+---

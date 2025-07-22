@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: postgresql-envs
+  name: aipub-batch-database-envs
   namespace: {{ .Release.Namespace }}
 data:
   TZ: "Asia/Seoul"
@@ -11,16 +11,19 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aipub-batch-db-migration-envs
+  name: aipub-batch-database-migration-envs
   namespace: {{ .Release.Namespace }}
 data:
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.{{ .Release.Namespace }}:5432/aipub-batch"
+  SPRING_FLYWAY_LOCATIONS: "{{ .Values.spring.flyway_locations }}"
+  SPRING_FLYWAY_LOCATIONS_PATH: "{{ .Values.spring.flyway_locations_path }}"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://aipub-batch-database.{{ .Release.Namespace }}:5432/{{ .Values.postgresql.database }}"
   SPRING_DATASOURCE_USERNAME: "{{ .Values.postgresql.username }}"
+  POSTGRESQL_DATABASE: "{{ .Values.postgresql.database }}"
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aipub-batch-db-migration-data-postgresql
+  name: aipub-batch-database-migration-data-postgresql
   namespace: {{ .Release.Namespace }}
 data:
 {{- range $i, $filename := .Values.db_migration.data }}

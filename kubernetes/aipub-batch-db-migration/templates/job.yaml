@@ -18,7 +18,7 @@ spec:
             - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-envs
+                  name: aipub-batch-database-envs
                   key: POSTGRES_PASSWORD
           command:
             - sh
@@ -26,7 +26,7 @@ spec:
             - |
               echo "⏳ Waiting for PostgreSQL to be ready..."
               for i in {1..60}; do
-              if pg_isready -h postgresql.{{ .Release.Namespace }} -U {{ .Values.postgresql.username }}; then
+              if pg_isready -h aipub-batch-database -U {{ .Values.postgresql.username }}; then
               echo "✅ PostgreSQL is ready!"
               break
               fi
@@ -35,13 +35,13 @@ spec:
               done
 
               echo "✅ PostgreSQL is ready. Checking if DB '{{ .Values.postgresql.database }}' exists..."
-              psql -h postgresql.{{ .Release.Namespace }} -U {{ .Values.postgresql.username }} -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '{{ .Values.postgresql.database }}'" | grep -q 1 || \
-              psql -h postgresql.{{ .Release.Namespace }} -U {{ .Values.postgresql.username }} -d postgres -c "CREATE DATABASE {{ .Values.postgresql.database }}"
+              psql -h aipub-batch-database -U {{ .Values.postgresql.username }} -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '{{ .Values.postgresql.database }}'" | grep -q 1 || \
+              psql -h aipub-batch-database -U {{ .Values.postgresql.username }} -d postgres -c "CREATE DATABASE {{ .Values.postgresql.database }}"
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: aipub-batch-db-migration-job
+  name: aipub-batch-database-migration-job
   annotations:
     "helm.sh/hook": post-install
     "helm.sh/hook-weight": "1"
@@ -52,21 +52,21 @@ spec:
   template:
     spec:
       containers:
-      - name: aipub-batch-db-migration
+      - name: aipub-batch-database-migration
         envFrom:
         - configMapRef:
-           name: aipub-batch-db-migration-envs
+           name: aipub-batch-database-migration-envs
         - secretRef:
-           name: aipub-batch-db-migration-envs
+           name: aipub-batch-database-migration-envs
         image: {{ .Values.db_migration.image }}
         #imagePullPolicy: Never
         volumeMounts:
-          - name: aipub-batch-db-migration-data-postgresql
+          - name: aipub-batch-database-migration-data-postgresql
             readOnly: true
-            mountPath: /etc/db-migration-data/postgresql
+            mountPath: {{ .Values.spring.flyway_locations_path }}
       restartPolicy: Never
       volumes:
-        - name: aipub-batch-db-migration-data-postgresql
+        - name: aipub-batch-database-migration-data-postgresql
           configMap:
-            name: aipub-batch-db-migration-data-postgresql
+            name: aipub-batch-database-migration-data-postgresql
 ---

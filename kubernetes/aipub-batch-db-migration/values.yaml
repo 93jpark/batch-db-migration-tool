@@ -2,8 +2,11 @@ postgresql:
   username: "root"
   password: "Password1@"
   database: "aipub-batch"
-  storageClassName: standard
-  pvcSize: 5Gi
+  storageClassName: ""
+  pvcSize: 2Gi
+spring:
+  flyway_locations_path: "/etc/database-migration-data/postgresql"
+  flyway_locations: "filesystem:/etc/database-migration-data/postgresql"
 
 db_migration:
   image: ten1010-io/aipub-db-migration-tool:1.0.0-SNAPSHOT
